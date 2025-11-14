@@ -1,0 +1,5 @@
+IndentWidth: 4                  
+PointerAlignment: Left          
+SpacesBeforeTrailingComments: 1 
+SeparateDefinitionBlocks: Always  
+MaxEmptyLinesToKeep: 2          
