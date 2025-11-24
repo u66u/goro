@@ -7,11 +7,8 @@
 #include <stdlib.h>
 
 void scheduler_init(int threads, int stack_count);
-
 void scheduler_wait();
-
 void coroutine_yield();
-
 void scheduler_spawn(void (*f)(void*), void* arg);
 
 

@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "coro.h"
 #include "stack_pool.h"
+#include <assert.h>
 #include <immintrin.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -8,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define LOCAL_QUEUE_CAP 256
+#define LOCAL_QUEUE_MASK (LOCAL_QUEUE_CAP - 1)
+static_assert((LOCAL_QUEUE_CAP > 0) &&
+                  ((LOCAL_QUEUE_CAP & (LOCAL_QUEUE_CAP - 1)) == 0),
+              "LOCAL_QUEUE_CAP must be a power of 2");
 
 typedef struct Coroutine {
     struct Coroutine* next;
@@ -23,7 +30,7 @@ typedef struct {
     Coroutine* tail;
     pthread_spinlock_t lock;
     stack_pool_t* pool;
-    int active_tasks;
+    uint32_t active_tasks;
     bool running;
 } Scheduler;
 
