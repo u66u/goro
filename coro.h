@@ -1,56 +1,94 @@
-#ifndef CORO_IMPLEMENTATION
-#define CORO_IMPLEMENTATION
+#ifndef COROUTINE_H
+#define COROUTINE_H
 
-#include "arena.h"
-#include <ucontext.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdlib.h>
 
-typedef enum { CORO_READY, CORO_RUNNING, CORO_DEAD } coro_status_t;
+void scheduler_init(int threads, int stack_count);
 
-typedef void (*coro_func_t)(void*);
+void scheduler_wait();
 
-typedef struct coroutine {
-    ucontext_t context;
-    void* stack;
-    struct coroutine* next;
-    coro_func_t entry_func;
-    void* arg;
-    coro_status_t status;
-    int id;
-} coroutine_t;
+void coroutine_yield();
 
-coroutine_t* coro_create(void (*func)(void*), void* arg,
-                         void (*trampoline)(void), stack_pool_t* pool) {
-    if (!pool)
-        return NULL;
+void scheduler_spawn(void (*f)(void*), void* arg);
 
-    coroutine_t* coro = (coroutine_t*)malloc(sizeof(coroutine_t));
-    if (!coro)
-        return NULL;
 
-    coro->stack = stack_pool_get(pool);
-    if (!coro->stack) {
-        free(coro);
-        return NULL;
-    }
+#define _GO_CAT_IMPL(a, b) a##b
+#define _GO_CAT(a, b) _GO_CAT_IMPL(a, b)
 
-    if (getcontext(&coro->context) == -1) {
-        stack_pool_return(pool, coro->stack);
-        free(coro);
-        return NULL;
-    }
+#define _GO_COUNT_ARGS(...) _GO_COUNT_IMPL(__VA_ARGS__, 5, 4, 3, 2, 1)
+#define _GO_COUNT_IMPL(_1, _2, _3, _4, _5, N, ...) N
 
-    coro->context.uc_stack.ss_sp = coro->stack;
-    coro->context.uc_stack.ss_size = pool->stack_size;
-    coro->context.uc_link = NULL;
+#define _GO_DISPATCH_1(FUNC) _GO_0(FUNC)
+#define _GO_DISPATCH_2(FUNC, ...) _GO_1(FUNC, __VA_ARGS__)
+#define _GO_DISPATCH_3(FUNC, ...) _GO_2(FUNC, __VA_ARGS__)
+#define _GO_DISPATCH_4(FUNC, ...) _GO_3(FUNC, __VA_ARGS__)
 
-    coro->entry_func = func;
-    coro->arg = arg;
 
-    // configure the context to jump to the trampoline
-    makecontext(&coro->context, trampoline, 0);
+#define _GO_0(FUNC) scheduler_spawn((void (*)(void*))FUNC, NULL)
 
-    return coro;
-}
+#define _GO_1(FUNC, A1)                                                        \
+    ({                                                                         \
+        typedef __typeof__((A1) + 0) _T1;                                      \
+        struct args_1 {                                                        \
+            _T1 a;                                                             \
+        };                                                                     \
+        struct args_1* args = malloc(sizeof(struct args_1));                   \
+        args->a = (A1);                                                        \
+        void _wrapper(void* p) {                                               \
+            struct args_1* u = (struct args_1*)p;                              \
+            FUNC(u->a);                                                        \
+            free(u);                                                           \
+        }                                                                      \
+        scheduler_spawn(_wrapper, args);                                       \
+    })
 
+#define _GO_2(FUNC, A1, A2)                                                    \
+    ({                                                                         \
+        typedef __typeof__((A1) + 0) _T1;                                      \
+        typedef __typeof__((A2) + 0) _T2;                                      \
+        struct args_2 {                                                        \
+            _T1 a;                                                             \
+            _T2 b;                                                             \
+        };                                                                     \
+        struct args_2* args = malloc(sizeof(struct args_2));                   \
+        args->a = (A1);                                                        \
+        args->b = (A2);                                                        \
+        void _wrapper(void* p) {                                               \
+            struct args_2* u = (struct args_2*)p;                              \
+            FUNC(u->a, u->b);                                                  \
+            free(u);                                                           \
+        }                                                                      \
+        scheduler_spawn(_wrapper, args);                                       \
+    })
+
+#define _GO_3(FUNC, A1, A2, A3)                                                \
+    ({                                                                         \
+        typedef __typeof__((A1) + 0) _T1;                                      \
+        typedef __typeof__((A2) + 0) _T2;                                      \
+        typedef __typeof__((A3) + 0) _T3;                                      \
+        struct args_3 {                                                        \
+            _T1 a;                                                             \
+            _T2 b;                                                             \
+            _T3 c;                                                             \
+        };                                                                     \
+        struct args_3* args = malloc(sizeof(struct args_3));                   \
+        args->a = (A1);                                                        \
+        args->b = (A2);                                                        \
+        args->c = (A3);                                                        \
+        void _wrapper(void* p) {                                               \
+            struct args_3* u = (struct args_3*)p;                              \
+            FUNC(u->a, u->b, u->c);                                            \
+            free(u);                                                           \
+        }                                                                      \
+        scheduler_spawn(_wrapper, args);                                       \
+    })
+
+// structs can only be passed by pointer
+#define GO(FUNC, ...)                                                          \
+    _GO_CAT(_GO_DISPATCH_, _GO_COUNT_ARGS(FUNC, ##__VA_ARGS__))                \
+    (FUNC, ##__VA_ARGS__)
 
 #endif

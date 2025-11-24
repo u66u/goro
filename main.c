@@ -1,32 +1,35 @@
-#include "scheduler.h"
+#include "coro.h"
 #include <stdio.h>
+#include <unistd.h>
 
-void worker(int id, int count) {
-    for (int i = 0; i < count; i++) {
-        printf("Worker %d: Iteration %d\n", id, i);
-        scheduler_yield();
+void math(int count, double start) {
+    printf("Task %d started\n", count);
+    double val = start;
+    for (int i = 0; i < 3; i++) {
+        val *= 1.5;
+        printf("Task %d: val = %f\n", count, val);
+        coroutine_yield();
     }
-    printf("Worker %d: DONE\n", id);
+    printf("Task %d done\n", count);
 }
 
-void printer(char* msg, int num) {
-    printf("Printer: %s (Val: %d)\n", msg, num);
-}
+typedef struct {
+    int id;
+    char* name;
+} Config;
 
-void simple(void) { printf("Simple task running\n"); }
+void complex_struct(Config* c) { printf("Config: %d, %s\n", c->id, c->name); }
 
 int main() {
-    scheduler_init(10);
+    scheduler_init(4, 100);
 
-    printf("Main: Spawning tasks...\n");
+    for (int i = 0; i < 5; i++) {
+        GO(math, i, (double)i + 0.5);
+    }
 
-    GO(worker, 1, 3);
-    GO(worker, 2, 2);
-    GO(printer, "Hello World", 42);
-    GO(simple);
+    Config c = {.id = 999, .name = "Master"};
+    GO(complex_struct, &c);
 
-    scheduler_start();
-
-    scheduler_cleanup();
+    scheduler_wait();
     return 0;
 }
