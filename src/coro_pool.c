@@ -6,16 +6,24 @@
 #include <unistd.h>
 
 stack_pool_t* coro_pool_create(size_t num_stacks, size_t stack_size) {
-    if (num_stacks < 1) return NULL;
-    if (stack_size == 0) stack_size = CORO_STACK_SIZE;
+    if (num_stacks < 1)
+        return NULL;
+    if (stack_size < 1)
+        stack_size = CORO_DEFAULT_STACK_SIZE;
 
     long page_size = getpagesize();
     size_t chunk_size = page_size + stack_size;
     size_t pool_size = num_stacks * chunk_size;
 
-    void* mem = mmap(NULL, pool_size, PROT_READ | PROT_WRITE,
-                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
-    if (mem == MAP_FAILED) return NULL;
+    /* we use MAP_NORESERVE trick to allocate virtual pages without reserving
+    actual swap space to "dynamically" grow coroutines' stacks without malloc.
+    Coroutines' stack size is still limited by the passed stack_size parameter
+    or by CORO_DEFAULT_STACK_SIZE  */
+    void* mem =
+        mmap(NULL, pool_size, PROT_READ | PROT_WRITE,
+             MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK | MAP_NORESERVE, -1, 0);
+    if (mem == MAP_FAILED)
+        return NULL;
 
     char* iter = (char*)mem;
     free_block_t* head = NULL;
@@ -58,6 +66,11 @@ void* coro_pool_get(stack_pool_t* pool) {
 }
 
 void coro_pool_return(stack_pool_t* pool, void* stack) {
+
+    /* free ONLY physical pages, keeps the virtual address mapped for reuse in
+     the stack pool */
+    madvise(stack, pool->stack_size, MADV_DONTNEED);
+
     pthread_spin_lock(&pool->lock);
     free_block_t* node = (free_block_t*)stack;
     node->next = pool->freelist_head;

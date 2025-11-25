@@ -132,7 +132,7 @@ CORO_API void coro_spawn(void (*f)(void*), void* arg) {
     }
 }
 
-CORO_API void coro_init(int thread_count, int stack_count) {
+CORO_API void coro_scheduler_init(int thread_count, int stack_count) {
     memset(&g_sched, 0, sizeof(g_sched));
 
     pthread_spin_init(&g_sched.global_lock, PTHREAD_PROCESS_PRIVATE);
@@ -145,7 +145,7 @@ CORO_API void coro_init(int thread_count, int stack_count) {
         g_sched.queues[i].id = i;
     }
 
-    g_sched.pool = coro_pool_create(stack_count, CORO_STACK_SIZE);
+    g_sched.pool = coro_pool_create(stack_count, CORO_DEFAULT_STACK_SIZE);
     if (!g_sched.pool)
         exit(1);
 

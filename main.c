@@ -33,7 +33,7 @@ void task_increment(void* arg) {
 }
 
 int main(void) {
-    int num_threads = 2;
+    int num_threads = 1;
 
 
     int stack_pool_size = 5000;

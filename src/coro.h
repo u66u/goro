@@ -11,10 +11,10 @@
 #define CORO_API extern
 #endif
 
-#define CORO_STACK_SIZE (64 * 1024)
+#define CORO_DEFAULT_STACK_SIZE (64 * 1024)
 
 
-CORO_API void coro_init(int thread_count, int stack_count);
+CORO_API void coro_scheduler_init(int thread_count, int stack_count);
 CORO_API void coro_wait(void);
 CORO_API void coro_yield(void);
 CORO_API void coro_spawn(void (*f)(void*), void* arg);

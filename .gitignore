@@ -2,4 +2,4 @@
 *.out
 main
 build
-./coro
+coro
