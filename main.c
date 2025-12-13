@@ -13,7 +13,7 @@ typedef struct {
 } Point;
 
 void task_struct(Point* p) {
-    printf("[Struct Task] Point: (%d, %d)\n", p->x, p->y);
+    printf("[Task] Point: (%d, %d)\n", p->x, p->y);
 }
 
 void task_heavy(int id) {
@@ -41,7 +41,7 @@ int main(void) {
     printf("Initializing Scheduler with %d threads and %d stacks...\n",
            num_threads, stack_pool_size);
 
-    coro_init(num_threads, stack_pool_size);
+    coro_scheduler_init(num_threads, stack_pool_size);
 
     printf("\n--- 1. Testing Arguments ---\n");
     GO(task_print, 1, 3.14);
@@ -51,14 +51,12 @@ int main(void) {
     Point p = {10, 20};
     GO(task_struct, &p);
 
-    printf("\n--- 2. Testing Yielding ---\n");
     GO(task_heavy, 100);
     GO(task_heavy, 101);
 
 
     coro_wait();
 
-    printf("\n--- 3. Stress Test (Work Stealing) ---\n");
     printf("Spawning 4000 tasks...\n");
 
     clock_t start = clock();

@@ -5,17 +5,17 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-stack_pool_t* coro_pool_create(size_t num_stacks, size_t stack_size) {
+stack_pool_t* coro_pool_create(size_t num_stacks, size_t max_stack_size) {
     if (num_stacks < 1)
         return NULL;
-    if (stack_size < 1)
-        stack_size = CORO_DEFAULT_STACK_SIZE;
+    if (max_stack_size < 1)
+        max_stack_size = CORO_DEFAULT_STACK_SIZE;
 
     long page_size = getpagesize();
-    size_t chunk_size = page_size + stack_size;
+    size_t chunk_size = page_size + max_stack_size;
     size_t pool_size = num_stacks * chunk_size;
 
-    /* we use MAP_NORESERVE trick to allocate virtual pages without reserving
+    /* we use MAP_NORESERVE to allocate virtual pages without reserving
     actual swap space to "dynamically" grow coroutines' stacks without malloc.
     Coroutines' stack size is still limited by the passed stack_size parameter
     or by CORO_DEFAULT_STACK_SIZE  */
@@ -45,7 +45,7 @@ stack_pool_t* coro_pool_create(size_t num_stacks, size_t stack_size) {
 
     stack_pool_t* pool = malloc(sizeof(stack_pool_t));
     pool->pool_start = mem;
-    pool->stack_size = stack_size;
+    pool->stack_size = max_stack_size;
     pool->pool_size = pool_size;
     pool->freelist_head = head;
     pthread_spin_init(&pool->lock, PTHREAD_PROCESS_PRIVATE);
