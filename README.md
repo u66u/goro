@@ -1,7 +1,13 @@
 todo:
 - use XSAVEOPT in inline asm
-- io_uring on blocking io
+- swap fxsave for faster instructions
+- io_uring on blocking io (EAGAIN)
 - growable stacks and stack splitting
 - rand() % thread_count in the stealing loop is risky because rand() often involves a global lock in libc. A thread-local PRNG would be faster.
 - double check atomic memory ordering
 - dynamic stacks are optional
+- avoid malloc in coroutines
+- faster way to switch context
+- replace spinlock in worker pauses
+- signal handling in coroutines
+- stack pooling instead of constant mmap/unmap
